@@ -77,7 +77,7 @@ ggplot() +
 ggsave('figures/README-example_pt.png',
        plot = last_plot(),
        height = 120,
-       width = 90,
+       width = 80,
        units = 'mm',
        dpi = 300
        )

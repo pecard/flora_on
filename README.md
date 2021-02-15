@@ -12,5 +12,5 @@ Flora-on is a project created and maintained by [Sociedade Portuguesa de Botâni
 
 ### Typical output
 
-<img src="figures/README-example_pt.png" width="100%" />
+<img src="figures/README-example_pt.png" width="50%" />
 
