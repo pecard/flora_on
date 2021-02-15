@@ -74,3 +74,10 @@ ggplot() +
        x = NULL, y = NULL) +
   theme_map()
 
+ggsave('figures/README-example_pt.png',
+       plot = last_plot(),
+       height = 120,
+       width = 90,
+       units = 'mm',
+       dpi = 300
+       )
