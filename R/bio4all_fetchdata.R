@@ -36,13 +36,15 @@ ini <- Sys.Date() - 7
 end <- Sys.Date()
 
 # Week summaries ----
-fon[between(created_at, ini, end)][, .(count = .N), by = day]
-fon[created_at %between% c(ini, end)][, .(count = .N)]
+fon[between(time_observed_at, ini, end)][, .(count = .N), by = day]
+fon[time_observed_at %between% c(ini, end)][, .(count = .N)]
+
+fon[taxon_id == 424478]
 
 ## Coerce to sf
 fonweek <-
-  fon[created_at %between% c(ini, end)][
-    , c('id', 'latitude', 'longitude', 'observed_on')] %>%
+  fon[time_observed_at %between% c(ini, end) & quality_grade == 'research'][
+    , c('id', 'latitude', 'longitude', 'time_observed_at')] %>%
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326, agr = "constant")
 
 ## Aggregate observations by Level1 (District)
