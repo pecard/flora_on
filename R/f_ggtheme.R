@@ -16,7 +16,8 @@ theme_map <- function(...) {
       panel.border = element_blank(),
       #plot.margin=unit(x=c(0,0,0,0),units="mm"),
       plot.title=element_text(size=9, face = 'bold', lineheight=.75, color ="grey30", hjust = 0.5),
-      plot.subtitle=element_text(size=8, lineheight=.75, color ="grey40"),
+      plot.subtitle = element_text(size=8, lineheight=.75, color ="grey30", hjust = 0.5),
+      #plot.subtitle=element_text(size=8, lineheight=.75, color ="grey40"),
       plot.caption = element_text(size=8, lineheight=.5, hjust = 0, face = "italic"
                                   , color ="grey40"), #Default is hjust=1
       plot.title.position = "plot", #NEW parameter. Apply for subtitle too.
