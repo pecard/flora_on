@@ -38,8 +38,12 @@ setkeyv(fon, c('datetime', 'taxon.name'))
 summary(fon$datetime)
 
 # Records from the last 8 days ----
-ini <- Sys.Date() - 7
-end <- Sys.Date()
+# ini <- Sys.Date() - 7
+# end <- Sys.Date()
+
+# Specific Dates ----
+ini <- '2021-03-01'
+end <- '2021-03-19'
 
 # Week summaries ----
 record_day <- fon[between(observed_on, ini, end)][, .(count = .N), by = day]
@@ -81,7 +85,7 @@ p1 <- ggplot() +
   coord_sf(expand = FALSE) +
   scale_fill_viridis_d(name='Registos', option = "viridis",
                        direction = -1, drop=FALSE) +
-  labs(title = paste("Total de Regitos: ", sum(p_utm$id, na.rm = T)),
+  labs(title = paste("Total de Registos: ", sum(p_utm$id, na.rm = T)),
        subtitle = paste(ini, '-', end),
        caption = 'Dados do projeto Flora-on - Biodiversity4all',
        x = NULL, y = NULL)  +
@@ -102,7 +106,9 @@ p1
 p2 <- record_day %>%
   ggplot(aes(x = as.Date(day), y = count)) +
   geom_line(size = 1.2, colour = '#3b528bff') +
-  scale_y_continuous(expand = c(0,0)) +
+  #geom_point(size = 2, pch = 21, stroke = 0.5, alpha = 0.5,
+  #fill = 'white', color = '#3b528bff') +
+  scale_y_continuous(expand = c(0.01,0)) +
   scale_x_date(date_labels = "%a, %d %b", breaks = '1 day') +
   labs(x = NULL, y='Observações/dia',
        title = paste("Registos diários")) +
@@ -134,6 +140,7 @@ p3 <-
 
 p3
 
+p1 + p2 / p3
 # Test patchwork layout
 
 # layout <- "
