@@ -62,6 +62,7 @@ theme_plot <- function(...) {
     )
 }
 
+
 theme_plot2 <- function(...) {
   theme_minimal() +
     theme(
@@ -91,4 +92,34 @@ theme_plot2 <- function(...) {
       ...
     )
 }
+
+# Reduce to region function using polygons
+f_map22poly <- function(emap = emap, egeo = egeo){
+  lc <-
+    tibble(class = emap$reduceRegion(
+      reducer= ee$Reducer$toList(),
+      maxPixels = 1e9,
+      geometry =  egeo
+    )$values()$get(0)$getInfo()
+    )
+}
+
+f_map2point <- function(emap = emap, egeo = egeo){
+  data <- emap$sampleRegions(
+    collection = egeo,
+    scale = 100,
+    geometries=TRUE
+  )
+}
+
+# CLC colour scheme
+# read corine color palette
+colours <- readxl::read_xls('D:/Dropbox/programacao/gee/clc2000legend.xls')
+colourshex <- as_tibble(str_split_fixed(colours$RGB, "-", 3)) %>%
+  mutate_if(is.character, as.integer)
+colourshex$CLC_CODE <- colours$CLC_CODE
+colourshex$Labelplot <- colours$Labelplot
+colourshex <- colourshex %>%
+  filter(complete.cases(.)) %>%
+  mutate(hexcode = rgb2hex(V1, V2, V3))
 
