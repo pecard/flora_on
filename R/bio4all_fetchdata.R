@@ -60,6 +60,8 @@ top5 <- fon[observed_on %between% c(ini, end)][
 
 # Remarkable taxa ----
 # fon[taxon_id == 424478] # L. ricardoi
+# fon[taxon_id == 357867] # Adonis microcarpa
+# fon[taxon_id == 158029] # Adonis annua
 
 
 # Filter and Coerce week data to sf ----
