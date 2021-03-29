@@ -62,20 +62,20 @@ theme_plot <- function(...) {
     )
 }
 
-
+# ggplot themes ----
 theme_plot2 <- function(...) {
   theme_minimal() +
     theme(
       text = element_text(color = "#22211d"),
       #axis.line = element_blank(),
-      axis.text.x = element_text(size = 7, color = "#22211d"),
-      axis.title.x = element_text(size = 7, color = "#22211d"),
-      axis.text.y = element_blank(),
+      axis.text.x = element_text(angle = 90, vjust=.5, size = 7, color = "#22211d"),
+      axis.text.y = element_text(size = 7, color = "#22211d"),
+      axis.title.y = element_text(size = 7, color = "#22211d"),
       #axis.ticks = element_blank(),
       #axis.title.x = element_blank(),
-      axis.title.y = element_text(color = "#22211d"),
       # panel.grid.minor = element_line(color = "#ebebe5", size = 0.2),
       panel.grid.major = element_blank(),
+      panel.grid = element_blank(),
       panel.grid.minor = element_blank(),
       plot.background = element_rect(fill = "#f5f5f2", color = NA),
       panel.background = element_rect(fill = "#f5f5f2", color = NA),
@@ -93,33 +93,35 @@ theme_plot2 <- function(...) {
     )
 }
 
-# Reduce to region function using polygons
-f_map22poly <- function(emap = emap, egeo = egeo){
-  lc <-
-    tibble(class = emap$reduceRegion(
-      reducer= ee$Reducer$toList(),
-      maxPixels = 1e9,
-      geometry =  egeo
-    )$values()$get(0)$getInfo()
+# ggplot themes ----
+theme_plotCLC <- function(...) {
+  theme_minimal() +
+    theme(
+      text = element_text(color = "#22211d"),
+      #axis.line = element_blank(),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(size = 7, color = "#22211d"),
+      axis.title.y = element_text(size = 7, color = "#22211d"),
+      #axis.ticks = element_blank(),
+      axis.title.x = element_blank(),
+      # panel.grid.minor = element_line(color = "#ebebe5", size = 0.2),
+      panel.grid.major = element_blank(),
+      panel.grid = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.background = element_rect(fill = "#f5f5f2", color = NA),
+      panel.background = element_rect(fill = "#f5f5f2", color = NA),
+      legend.background = element_rect(fill = "#f5f5f2", color = NA),
+      panel.border = element_blank(),
+      plot.title=element_text(size=9, face = 'bold', lineheight=.75, color ="grey30",hjust = 0.5),
+      plot.subtitle=element_text(size=8, lineheight=.75, color ="grey40"),
+      plot.caption = element_text(size=8, lineheight=.5, hjust = 0, face = "italic"
+                                  , color ="grey40"), #Default is hjust=1
+      plot.title.position = "plot", #NEW parameter. Apply for subtitle too.
+      plot.caption.position =  "plot",
+      legend.title = element_text(size=8, face = 'bold',  lineheight=.75, color ="grey30"),
+      legend.text = element_text(size=8, lineheight=.75, color ="grey30"),
+      legend.position="bottom",
+      legend.key.height = unit(3, "mm"),
+      ...
     )
 }
-
-f_map2point <- function(emap = emap, egeo = egeo){
-  data <- emap$sampleRegions(
-    collection = egeo,
-    scale = 100,
-    geometries=TRUE
-  )
-}
-
-# CLC colour scheme
-# read corine color palette
-colours <- readxl::read_xls('D:/Dropbox/programacao/gee/clc2000legend.xls')
-colourshex <- as_tibble(str_split_fixed(colours$RGB, "-", 3)) %>%
-  mutate_if(is.character, as.integer)
-colourshex$CLC_CODE <- colours$CLC_CODE
-colourshex$Labelplot <- colours$Labelplot
-colourshex <- colourshex %>%
-  filter(complete.cases(.)) %>%
-  mutate(hexcode = rgb2hex(V1, V2, V3))
-

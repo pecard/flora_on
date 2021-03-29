@@ -1,14 +1,10 @@
 ## Get Data from Inaturalist aggregated from the Flora-on Project ##
-# Locale to plot names in PT
-#Sys.setlocale()
-# Sys.getlocale("LC_TIME") "English_United Kingdom.1252"
-Sys.setlocale("LC_ALL", "Portuguese_Portugal.1252")
 
 # Load packages ----
 #remotes::install_github("ropensci/rinat") # install from github repo
-kpacks <- c('rinat', 'tidyverse', 'extrafont', 'sf', 'data.table', 'lubridate',
-            'viridis', 'raster', 'ggtext', 'patchwork',
-            'reticulate', 'rgee','ggtern')
+kpacks <- c('reticulate', 'rgee', 'rinat', 'tidyverse', 'extrafont',
+            'sf', 'data.table', 'lubridate' , 'viridis',
+            'ggtext', 'patchwork')
 new.packs <- kpacks[!(kpacks %in% installed.packages()[ ,"Package"])]
 if(length(new.packs)) install.packages(new.packs)
 lapply(kpacks, require, character.only=T)
@@ -17,15 +13,20 @@ remove(kpacks, new.packs)
 # Initiate EarthEngine ----
 ee_Initialize(email = 'pauloeducardoso@gmail.com') # account email
 
+# Locale to plot names in PT
+#Sys.setlocale()
+# Sys.getlocale("LC_TIME") "English_United Kingdom.1252"
+Sys.setlocale("LC_ALL", "Portuguese_Portugal.1252")
+
+# source funs ----
+source('./R/help_funs.R')
+
 # Load data Admin data ----
 admin0_cont <- readRDS('./data/admin0_cont.rds')
 admin1_cont <- readRDS('./data/admin1_cont.rds')
 
 # Load utm grid ----
 utm10 <- readRDS('./data/utm10.rds')
-
-# Source custom functions ----
-source('./R/f_ggtheme.R') # ggplot theme
 
 # Get data from Inat Flora-on ----
 fon <- readRDS(here::here('data/bio4alldata.rds'))
@@ -58,7 +59,7 @@ top5 <- fon[observed_on %between% c(ini, end)][
     order(-count)][1:5, ]
 
 # Remarkable taxa ----
-fon[taxon_id == 424478] # L. ricardoi
+# fon[taxon_id == 424478] # L. ricardoi
 
 
 # Filter and Coerce week data to sf ----
@@ -69,8 +70,6 @@ fonweek <-
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326, agr = "constant")
 unique(fonweek$taxon.name)
 
-#fonweek %>% filter(taxon.name == "Fritillaria lusitanica" )
-
 # Spatial aggregate : UTM10x10km ----
 p_utm <-
   aggregate(fonweek['id'], utm10['UTM'],
@@ -78,6 +77,9 @@ p_utm <-
   mutate(ncl = cut(id, breaks = c(0, 10, 25, 50, 75, +Inf),
                    labels = c('1-10', '11-25', '26-50', '51-75', '>75'))
   ) %>% filter(!is.na(id))
+
+# Plots ----
+source('./R/f_ggtheme.R') # source funs and ggplot themes
 
 # Plot UTM map ----
 p1 <- ggplot() +
@@ -100,8 +102,6 @@ p1
 p2 <- record_day %>%
   ggplot(aes(x = as.Date(day), y = count)) +
   geom_line(size = 1.2, colour = '#3b528bff') +
-  #geom_point(size = 2, pch = 21, stroke = 0.5, alpha = 0.5,
-  #fill = 'white', color = '#3b528bff') +
   scale_y_continuous(expand = c(0.01,0)) +
   scale_x_date(date_labels = "%a, %d %b", breaks = '1 day') +
   labs(x = NULL, y='Observações/dia',
@@ -119,24 +119,13 @@ p3 <-
   geom_text(aes(label = top5$taxon.name, y = 1),
             color = 'grey23',  size = 3, hjust = 0,
             fontface = "italic") +
-  # geom_label(aes(label = top5$taxon.name, y = 1),
-  #           fill = 'white', colour = 'grey50', size = 2, hjust = 0,
-  #           fontface = "italic", alpha = 0.5) +
   theme_plot2()
 p3
 
 p1 + p2 / p3
 
-# Save plot ----
-ggsave('figures/README-example_pt.png',
-       plot = p1 + p2 / p3,
-       height = 150,
-       width = 120,
-       units = 'mm',
-       dpi = 300
-)
 
-# Use Corine CLC ----
+# EarthEngine - Use Corine CLC ----
 clc18 = ee$Image('COPERNICUS/CORINE/V20/100m/2018')$select('landcover')
 
 # Coerce points to ee object ----
@@ -161,7 +150,7 @@ summary_clc$landcover <- as.character(summary_clc$landcover)
 # CLC legend colours ----
 cols = summary_clc$hexcode[1:10]
 brks <- as.character(summary_clc$landcover)[1:10]
-labs <- summary_clc$Labelplot[1:10]
+labs <- summary_clc$LabelCLC[1:10]
 
 p4 <- ggplot(aes(x=reorder(landcover, -count), y = count, fill = landcover),
        data = summary_clc[1:10, ]) +
@@ -170,35 +159,28 @@ p4 <- ggplot(aes(x=reorder(landcover, -count), y = count, fill = landcover),
                     values = cols,
                     breaks = brks,
                     labels = labs) +
-  theme_plot()
+  theme_plotCLC() +
+  guides(fill=guide_legend(nrow = 5,byrow=TRUE,
+                           title.position = "top")) +
+  labs(title = 'Uso do solo (CLC)', y = 'Registos')
 
+p4
 ggsave('figures/README-example_CLC.png',
        plot = p4,
        height = 80,
-       width = 80,
+       width = 90,
        units = 'mm',
        dpi = 300
 )
 
+# Save plot ----
+ggsave('figures/README-example_pt.png',
+       #plot = p1 + p2 / p3,
+       plot = p1 | (p2 / p3 / p4),
 
-# Test text plot ----
-# https://github.com/jennschilling/covid/blob/main/vaccine_dist_2021_03.Rmd
-# Plot Formatting
-#font <- "Gill Sans MT"
-#theme_set(theme_map(base_family = font))
-
-# Test patchwork layout
-
-# layout <- "
-# AAAABB
-# AAAA##
-# AAAACC
-# "
-# p1 + p2 + p3 +
-#   plot_layout(design = layout,
-#               widths = unit(c(1, 1), c('cm', 'cm')),
-#               heights = unit(c(3, 1), c('cm', 'cm'))) +
-#   plot_annotation(theme = theme(plot.background =
-#                                   element_rect(fill = "#f5f5f2",
-#                                                color = NA)))
+       height = 180,
+       width = 150,
+       units = 'mm',
+       dpi = 300
+)
 
