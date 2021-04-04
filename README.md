@@ -12,8 +12,8 @@ Flora-on is a project created and maintained by [Sociedade Portuguesa de Botâni
 
 ### Typical output
 
-#### Observation Map
-<img src="figures/README-example_pt.png" width="50%" />
+#### Week Map
+<img src="figures/README-example_pt.png" width="60%" />
 
-#### Land Cover analysis
-<img src="figures/README-example_CLC.png" width="50%" />
+#### Week flowering map
+<img src="figures/README-flowering_example_pt.png" width="50%" />
