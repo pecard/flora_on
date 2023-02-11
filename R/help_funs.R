@@ -21,17 +21,6 @@ x <- c("165 239 210", "111 45 93")
 sapply(strsplit(x, " "), function(x)
   rgb(x[1], x[2], x[3], maxColorValue=255))
 
-# CLC colour scheme
-# read corine color palette
-colours <- readxl::read_xls('D:/Dropbox/programacao/gee/clc2000legend.xls')
-colourshex <- as_tibble(str_split_fixed(colours$RGB, "-", 3)) %>%
-  mutate_if(is.character, as.integer)
-colourshex$CLC_CODE <- colours$CLC_CODE
-colourshex$Labelplot <- colours$Labelplot
-colourshex <- colourshex %>%
-  filter(complete.cases(.)) %>%
-  mutate(hexcode = rgb(V1, V2, V3, maxColorValue=255),
-         LabelCLC = paste(CLC_CODE, Labelplot))
 
 # Inaturalist API data access
 # Use iNaturalist API to request data

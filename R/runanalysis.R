@@ -1,75 +1,64 @@
 ## Get Data from Inaturalist aggregated from the Flora-on Project ##
 
 # Load packages ----
-#remotes::install_github("ropensci/rinat") # install from github repo
 kpacks <- c('reticulate', 'ps', "rgee",
             'rinat','tidyverse', 'extrafont',
             'sf', 'data.table', 'lubridate' , 'viridis',
-            'ggtext', 'patchwork', 'ggridges')
+            'ggtext', 'patchwork', 'ggridges', 'ragg',
+            'jsonlite', 'httr', 'geojsonio')
 new.packs <- kpacks[!(kpacks %in% installed.packages()[ ,"Package"])]
 if(length(new.packs)) install.packages(new.packs)
 lapply(kpacks, require, character.only=T)
 remove(kpacks, new.packs)
 
 # Initiate EarthEngine ----
-ee_Initialize(email = 'pauloeducardoso@gmail.com') # account email
-
-#remotes::install_github("ropensci/rinat") # install from github repo
-kpacks <- c('rinat','tidyverse', 'extrafont',
-            'sf', 'data.table', 'lubridate' , 'viridis',
-            'ggtext', 'patchwork', 'ggridges', 'ragg',
-            'jsonlite', 'httr')
-new.packs <- kpacks[!(kpacks %in% installed.packages()[ ,"Package"])]
-if(length(new.packs)) install.packages(new.packs)
-lapply(kpacks, require, character.only=T)
-remove(kpacks, new.packs)
+ee$Authenticate()
+ee$Initialize()
+#ee_Initialize(email = 'pauloeducardoso@gmail.com') # account email
 
 # Locale to plot names in PT
-#Sys.setlocale()
-# Sys.getlocale("LC_TIME") "English_United Kingdom.1252"
-Sys.setlocale("LC_ALL", "Portuguese_Portugal.1252")
+#Sys.setlocale("LC_ALL", "Portuguese_Portugal.1252")
 
-# source funs ----
+# source helper funs ----
 source('./R/help_funs.R')
 
-# Load data Admin data ----
-admin0_cont <- readRDS('./data/admin0_cont.rds')
-admin1_cont <- readRDS('./data/admin1_cont.rds')
-admin_madeira <- readRDS('./data/madeira.rds')
+# Source base data
+source('./R/getRefData.R')
 
-# Load utm grids ----
-utm10 <- readRDS('./data/utm10.rds')
-utm10mad <- readRDS('./data/utm10mad.rds')
+# Plots ----
+source('./R/f_ggtheme.R') # source funs and ggplot themes
 
-# Get data from Inat Flora-on ----
+# Read INat Flora-on data ----
 fon <- readRDS(here::here('data/bio4alldata.rds'))
-#fon <- get_inat_obs_project('flora-on', raw = TRUE)
 setDT(fon) # coerce to DT
+
+#fonbbtz <- iNat(project_id = 'i-bioblitz-flora-portugal')
+#fonbbtz <- iNat(project_id = 'i-bioblitz-flora-portugal')
+fon_month <- fread('./data-raw/observations-295874.csv') # jan2023
+# Adjust column classes ----
+fon_month[, datetime := ymd(observed_on) ] # Coerce to datetime
+fon_month[, day := as.POSIXct(trunc(datetime, 'days')) ] # round day
+
+setkeyv(fon_month, c('datetime', 'scientific_name'))
+
 #saveRDS(fon, here::here('data/bio4alldata.rds'))
 
 # Adjust column classes ----
-fon[, datetime := ymd(observed_on) ] # Coerce to datetime
-fon[, day := as.POSIXct(trunc(datetime, 'days')) ] # round day
-setkeyv(fon, c('datetime', 'taxon.name'))
-summary(fon$datetime)
+#fon[, datetime := ymd(observed_on) ] # Coerce to datetime
+#fon[, day := as.POSIXct(trunc(datetime, 'days')) ] # round day
+#setkeyv(fon, c('datetime', 'taxon.name'))
 
-# Records from the last 8 days ----
-ini <- Sys.Date() - 7
-end <- Sys.Date()
+summary(fon_month$datetime)
 
-# Other, Specific Dates ----
-#ini <- '2021-03-01'
-#end <- '2021-03-19'
+# Start End Dates ----
+ini <- min(fon_month$datetime)
+end <- max(fon_month$datetime)
 
-# Week summaries ----
-record_day <- fon[between(observed_on, ini, end)][, .(count = .N), by = day]
+# Month summaries: ALL ----
+record_day <- fon_month[between(observed_on, ini, end)][, .(count = .N), by = day]
 
-fon[observed_on %between% c(ini, end)][, .(count = .N)]
+fon_month[observed_on %between% c(ini, end)][, .(count = .N)]
 
-# Top five obs ----
-top5 <- fon[observed_on %between% c(ini, end)][
-  , .(count = .N), by = 'taxon.name'][
-    order(-count)][1:5, ]
 
 # Remarkable taxa ----
 # fon[taxon_id == 424478] # L. ricardoi
@@ -77,18 +66,25 @@ top5 <- fon[observed_on %between% c(ini, end)][
 # fon[taxon_id == 158029] # Adonis annua
 
 
-# Filter and Coerce week data to sf ----
-fonweek <-
-  fon[time_observed_at %between% c(ini, end) & quality_grade == 'research'][
-    , c('id', 'taxon_id', 'taxon.name', 'latitude',
-        'longitude', 'time_observed_at', 'uri')]
+# Filter and Coerce RG month data to sf ----
+fonvalid <-
+  fon_month[time_observed_at %between% c(ini, end) &
+              quality_grade == 'research'][
+    , c('id', 'taxon_id', 'scientific_name', 'latitude',
+        'longitude', 'time_observed_at', 'url')]
 
-week_sf <- fonweek %>%
+valid_sf <-
+  fonvalid %>%
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326, agr = "constant")
+
+# Top five RG obs ----
+top5 <-
+  fonvalid[ , .(count = .N), by = 'scientific_name'][
+    order(-count)][1:5, ]
 
 # Spatial aggregate : UTM10x10km ----
 p_utm <-
-  aggregate(week_sf['id'], utm10['UTM'],
+  aggregate(valid_sf['id'], utm10['UTM'],
             FUN = function(x) length(x)) %>%
   mutate(ncl = cut(id, breaks = c(0, 10, 25, 50, 75, +Inf),
                    labels = c('1-10', '11-25', '26-50', '51-75', '>75'))
@@ -96,8 +92,8 @@ p_utm <-
 
 # Spatial aggregate : UTM10x10km Madeira ----
 p_utm_mad <-
-  aggregate(fon[, c('id', 'taxon.name', 'latitude', 'longitude',
-                    'time_observed_at', 'uri')] %>%
+  aggregate(fon_month[, c('id', 'scientific_name', 'latitude', 'longitude',
+                          'time_observed_at', 'url')] %>%
               st_as_sf(coords = c("longitude", "latitude"), crs = 4326, agr = "constant")
             , utm10mad['id'],
             FUN = function(x) length(x)) %>%
@@ -106,11 +102,10 @@ p_utm_mad <-
   ) %>% filter(!is.na(id))
 
 
-# Plots ----
-source('./R/f_ggtheme.R') # source funs and ggplot themes
 
 # Plot UTM map ----
-p1 <- ggplot() +
+p1 <-
+  ggplot() +
   geom_sf(data = admin0_cont, fill = 'grey70', color = NA, size = .01) +
   geom_sf(aes(fill = ncl), color = NA, data = p_utm) +
   coord_sf(expand = FALSE) +
@@ -139,28 +134,28 @@ p1mad <- ggplot() +
                        direction = -1, drop=FALSE) +
   labs(x = NULL, y = NULL, title = 'Madeira')  +
   theme_map_mad() +
-  guides(fill=FALSE)
+  guides(fill='none')
 p1mad
 
 # Plot Obs per day ----
 p2 <- record_day %>%
   ggplot(aes(x = as.Date(day), y = count)) +
-  geom_line(size = 1.2, colour = '#3b528bff') +
+  geom_line(linewidth = 1.2, colour = '#3b528bff') +
   scale_y_continuous(expand = c(0.01,0)) +
-  scale_x_date(date_labels = "%d %b", breaks = '1 day') +
+  scale_x_date(date_labels = "%d %b", breaks = '3 days', expand = c(0.1,0)) +
   labs(x = NULL, y='Observações/dia',
-       title = paste("Registos diários")) +
+       title = paste("Num. registos diários em Portugal")) +
   theme_plot()
 p2
 
 # Plot Top 5 ----
 p3 <-
-  ggplot(aes(x=reorder(taxon.name, -count), y = count), data = top5) +
+  ggplot(aes(x=reorder(scientific_name, -count), y = count), data = top5) +
   geom_col(fill = '#21908CFF') +
   coord_flip() +
   labs(x = NULL, y='Registos',
        title = paste("Mais observadas")) +
-  geom_text(aes(label = top5$taxon.name, y = 1),
+  geom_text(aes(label = top5$scientific_name, y = 1),
             color = 'grey23',  size = 3, hjust = 0,
             fontface = "italic") +
   theme_plot2()
@@ -171,7 +166,7 @@ p3
 clc18 = ee$Image('COPERNICUS/CORINE/V20/100m/2018')$select('landcover')
 
 # Coerce points to ee object ----
-top5taxa <- fonweek %>% filter(taxon.name %in% top5$taxon.name) %>%
+top5taxa <- fon_month %>% filter(scientific_name %in% top5$scientific_name) %>%
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326, agr = "constant")
 ptos_ee <- st_geometry(top5taxa) %>% sf_as_ee()
 
@@ -208,6 +203,7 @@ p4 <- ggplot(aes(x=reorder(landcover, -count), y = count, fill = landcover),
   labs(title = 'Uso do solo (CLC)', y = 'Registos')
 
 p4
+
 final <- p1 +
   inset_element(p2, .63, .66, 1, 1, align_to = 'full') +
   inset_element(p3, .63, .40, 1, .65, align_to = 'full') +

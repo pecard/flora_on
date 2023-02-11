@@ -1,12 +1,18 @@
-# packages
-pacman::p_load('reticulate', 'ps', "rgee", 
-               "tidyverse", "sf", "ggplot2", "patchwork",
-               'googledrive', 'stars', 'plotKML', 'readxl',
-               'networkD3', 'OpenLand')
+# Instructions ----
+# https://github.com/r-spatial/rgee/issues/267
+# https://developers.google.com/earth-engine/guides/python_install-conda#install_api
 
-ee_Initialize(email = 'pauloeducardoso@gmail.com')
+# packages ----
+#remotes::install_github("r-spatial/rgee")
+# pacman::p_load('reticulate', 'ps', "rgee",
+#                "tidyverse", "sf", "ggplot2", "patchwork",
+#                'googledrive', 'stars', 'plotKML', 'readxl',
+#                'networkD3', 'OpenLand', 'googleCloudStorageR')
+pacman::p_load('reticulate', "rgee")
+ee_check()
+ee_Initialize(drive = TRUE, user = 'pauloeducardoso@gmail.com')
 
-# CORINE
+# CORINE ----
 clc18 = ee$Image('COPERNICUS/CORINE/V20/100m/2018')$select('landcover');
 clc00 = ee$Image('COPERNICUS/CORINE/V20/100m/2000')$select('landcover');
 clc1800 = clc18$multiply(1000)$add(clc00);
@@ -25,7 +31,7 @@ colourshex <- colourshex %>%
 
 # ROI
 roi <- st_buffer(sf::st_sfc(st_point(c(-8.2575414,37.9295831))), 0.1) %>% sf::st_set_crs(4326)
-roi <- sf::st_sfc(st_point(c(-8.2575414,37.9295831))) %>% 
+roi <- sf::st_sfc(st_point(c(-8.2575414,37.9295831))) %>%
   sf::st_set_crs(4326) %>% st_transform(3857)
 roi <- roi %>% st_buffer(20000)
 roi_ee <- roi %>% sf_as_ee()
@@ -61,8 +67,8 @@ summchange1800 <- change1800 %>% group_by(change) %>%
 
 gralt <- summchange1800 %>% filter(area_ha > 1000)
 gr_clccode <- unique(c(as.numeric(gralt$clc18), as.numeric(gralt$clc00)))
-gr_legend_tab <- 
-  legend_tab %>% 
+gr_legend_tab <-
+  legend_tab %>%
   filter(categoryValue %in% gr_clccode)
 gr_legend_tab$categoryName <- as.factor(as.character(gr_legend_tab$categoryName))
 
@@ -98,3 +104,5 @@ chordDiagramLand(dataset = gr_conting_tab, legendtable = gr_legend_tab, legtitle
                  legendsize = 1)
 
 dev.off()
+
+
