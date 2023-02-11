@@ -1,8 +1,10 @@
-library(visNetwork)
-library(igraph)
-library(qgraph)
-#devtools::install_github('hfgolino/EGA')
-library(EGAnet)
+kpacks <- c('visNetwork', 'igraph', "qgraph",
+            'EGAnet')
+new.packs <- kpacks[!(kpacks %in% installed.packages()[ ,"Package"])]
+if(length(new.packs)) install.packages(new.packs)
+lapply(kpacks, require, character.only=T)
+remove(kpacks, new.packs)
+
 class(data)
 # https://psych-networks.com/r-tutorial-identify-communities-items-networks/
 

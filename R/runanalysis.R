@@ -23,30 +23,18 @@ ee$Initialize()
 source('./R/help_funs.R')
 
 # Source base data
-source('./R/getRefData.R')
+source('./R/refData.R')
 
 # Plots ----
 source('./R/f_ggtheme.R') # source funs and ggplot themes
 
 # Read INat Flora-on data ----
-fon <- readRDS(here::here('data/bio4alldata.rds'))
-setDT(fon) # coerce to DT
-
-#fonbbtz <- iNat(project_id = 'i-bioblitz-flora-portugal')
-#fonbbtz <- iNat(project_id = 'i-bioblitz-flora-portugal')
 fon_month <- fread('./data-raw/observations-295874.csv') # jan2023
 # Adjust column classes ----
 fon_month[, datetime := ymd(observed_on) ] # Coerce to datetime
 fon_month[, day := as.POSIXct(trunc(datetime, 'days')) ] # round day
 
 setkeyv(fon_month, c('datetime', 'scientific_name'))
-
-#saveRDS(fon, here::here('data/bio4alldata.rds'))
-
-# Adjust column classes ----
-#fon[, datetime := ymd(observed_on) ] # Coerce to datetime
-#fon[, day := as.POSIXct(trunc(datetime, 'days')) ] # round day
-#setkeyv(fon, c('datetime', 'taxon.name'))
 
 summary(fon_month$datetime)
 
@@ -64,7 +52,6 @@ fon_month[observed_on %between% c(ini, end)][, .(count = .N)]
 # fon[taxon_id == 424478] # L. ricardoi
 # fon[taxon_id == 357867] # Adonis microcarpa
 # fon[taxon_id == 158029] # Adonis annua
-
 
 # Filter and Coerce RG month data to sf ----
 fonvalid <-
@@ -101,6 +88,17 @@ p_utm_mad <-
                    labels = c('1-10', '11-25', '26-50', '51-75', '>75'))
   ) %>% filter(!is.na(id))
 
+# Spatial aggregate : UTM10x10km Acores ----
+p_utm_aco <-
+  aggregate(
+    fon_month[, c('id', 'scientific_name', 'latitude', 'longitude',
+                  'time_observed_at', 'url')] %>%
+      st_as_sf(coords = c("longitude", "latitude"), crs = 4326, agr = "constant")
+    , utm10aco['id'],
+    FUN = function(x) length(x)) %>%
+  mutate(ncl = cut(id, breaks = c(0, 10, 25, 50, 75, +Inf),
+                   labels = c('1-10', '11-25', '26-50', '51-75', '>75'))
+  ) %>% filter(!is.na(id))
 
 
 # Plot UTM map ----
@@ -111,7 +109,7 @@ p1 <-
   coord_sf(expand = FALSE) +
   scale_fill_viridis_d(name='Registos', option = "viridis",
                        direction = -1, drop=FALSE) +
-  labs(title = paste("Total de Registos: ",
+  labs(title = paste("Total de Registos 'RG': ",
                      (sum(p_utm$id, na.rm = T) +
                         sum(p_utm_mad$id, na.rm = T))),
        subtitle = paste(ini, '-', end),
@@ -121,12 +119,14 @@ p1 <-
   guides(fill = guide_legend(title.position = "top", title.hjust = .5,
                              label.position = "bottom",
                              legend.margin=unit(0, "lines")))
-p1 <-
+p1c <-
   p1 +
-  theme(plot.margin = margin(1,200,1,100),
+  theme(plot.margin = margin(2,250,2,250),
         panel.spacing = unit(0, "mm"))
+p1c
 
-p1mad <- ggplot() +
+p1mad <-
+  ggplot() +
   geom_sf(data = admin_madeira, fill = 'grey70', color = NA, size = .01) +
   geom_sf(aes(fill = ncl), color = NA, alpha = .9, data = p_utm_mad) +
   coord_sf(expand = FALSE) +
@@ -137,6 +137,18 @@ p1mad <- ggplot() +
   guides(fill='none')
 p1mad
 
+p1aco <-
+  ggplot() +
+  geom_sf(data = admin_acores_centr, fill = 'grey70', color = NA, size = .01) +
+  geom_sf(aes(fill = ncl), color = NA, alpha = .9, data = p_utm_aco) +
+  coord_sf(expand = FALSE) +
+  scale_fill_viridis_d(name='Registos', option = "viridis",
+                       direction = -1, drop=FALSE) +
+  labs(x = NULL, y = NULL, title = 'Açores - grupo central')  +
+  theme_map_mad() +
+  guides(fill=FALSE)
+p1aco
+
 # Plot Obs per day ----
 p2 <- record_day %>%
   ggplot(aes(x = as.Date(day), y = count)) +
@@ -144,7 +156,7 @@ p2 <- record_day %>%
   scale_y_continuous(expand = c(0.01,0)) +
   scale_x_date(date_labels = "%d %b", breaks = '3 days', expand = c(0.1,0)) +
   labs(x = NULL, y='Observações/dia',
-       title = paste("Num. registos diários em Portugal")) +
+       title = paste("Registos diários em Portugal")) +
   theme_plot()
 p2
 
@@ -154,7 +166,7 @@ p3 <-
   geom_col(fill = '#21908CFF') +
   coord_flip() +
   labs(x = NULL, y='Registos',
-       title = paste("Mais observadas")) +
+       title = paste("Mais validadas")) +
   geom_text(aes(label = top5$scientific_name, y = 1),
             color = 'grey23',  size = 3, hjust = 0,
             fontface = "italic") +
@@ -162,13 +174,22 @@ p3 <-
 p3
 
 
+
+top5taxa <-
+  fon_month %>%
+  filter(scientific_name %in% top5$scientific_name)
+
+# sf object ----
+top5taxa_sf <-
+  top5taxa %>%
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326, agr = "constant")
+# Coerce points to ee object ----
+ptos_ee <-
+  st_geometry(top5taxa_sf) %>%
+  sf_as_ee()
+
 # EarthEngine - Use Corine CLC ----
 clc18 = ee$Image('COPERNICUS/CORINE/V20/100m/2018')$select('landcover')
-
-# Coerce points to ee object ----
-top5taxa <- fon_month %>% filter(scientific_name %in% top5$scientific_name) %>%
-  st_as_sf(coords = c("longitude", "latitude"), crs = 4326, agr = "constant")
-ptos_ee <- st_geometry(top5taxa) %>% sf_as_ee()
 
 # Extract CORINE landcover to ee points ----
 top5taxa_clc <- f_map2point(clc18, ptos_ee)
@@ -204,17 +225,19 @@ p4 <- ggplot(aes(x=reorder(landcover, -count), y = count, fill = landcover),
 
 p4
 
-final <- p1 +
-  inset_element(p2, .63, .66, 1, 1, align_to = 'full') +
-  inset_element(p3, .63, .40, 1, .65, align_to = 'full') +
-  inset_element(p4, .63, .00, .95, .39, align_to = 'full') +
-  inset_element(p1mad, -0.30, .17, .47, .33, align_to = 'full')
+final <-
+  p1c +
+  inset_element(p2, .65, .66, 1, 1, align_to = 'full') +
+  inset_element(p3, .65, .40, 1, .65, align_to = 'full') +
+  inset_element(p4, .65, .00, .95, .39, align_to = 'full') +
+  inset_element(p1mad, -0.30, .17, .47, .33, align_to = 'full') +
+  inset_element(p1aco, -0.15, .45, .51, .68, align_to = 'full')
 
 
 ragg::agg_png(here::here("figures",
                          paste0("README-example_pt",
                                 format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")),
-              res = 320, width = 200, height = 170, units = "mm")
+              res = 320, width = 250, height = 170, units = "mm")
 final
 
 dev.off()

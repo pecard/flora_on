@@ -4,9 +4,11 @@ adm1 <- readRDS('./data/admin1_pt.rds')
 admin0_cont <- readRDS('./data/admin0_cont.rds')
 admin1_cont <- readRDS('./data/admin1_cont.rds')
 admin_madeira <- readRDS('./data/madeira.rds')
+admin_acores <- readRDS('./data/acores.rds')
+admin_acores_centr <- readRDS('./data/admin_acores_centr.rds')
 utm10 <- readRDS('./data/utm10.rds')
 utm10mad <- readRDS('./data/utm10mad.rds')
-utm10mad <- readRDS('./data/utm10mad.rds')
+utm10aco <- readRDS('./data/utm10acores.rds')
 
 # Bounding box for continental PT ----
 ptc_lim = data.frame(ylim=c(35, 43), xlim=c(-12, -6.0))
