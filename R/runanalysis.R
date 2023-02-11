@@ -5,12 +5,8 @@ kpacks <- c('reticulate', 'ps', "rgee",
             'rinat','tidyverse', 'extrafont',
             'sf', 'data.table', 'lubridate' , 'viridis',
             'ggtext', 'patchwork', 'ggridges', 'ragg',
-<<<<<<< HEAD
             'jsonlite', 'httr', 'geojsonio','igraph',  'bipartite',
             'grDevices')
-=======
-            'jsonlite', 'httr', 'geojsonio')
->>>>>>> e063050124ee08850fddb606fc2f2447116b5f8e
 new.packs <- kpacks[!(kpacks %in% installed.packages()[ ,"Package"])]
 if(length(new.packs)) install.packages(new.packs)
 lapply(kpacks, require, character.only=T)
@@ -35,10 +31,7 @@ source('./R/f_ggtheme.R') # source funs and ggplot themes
 
 # Read INat Flora-on data ----
 fon_month <- fread('./data-raw/observations-295874.csv') # jan2023
-<<<<<<< HEAD
 
-=======
->>>>>>> e063050124ee08850fddb606fc2f2447116b5f8e
 # Adjust column classes ----
 fon_month[, datetime := ymd(observed_on) ] # Coerce to datetime
 fon_month[, day := as.POSIXct(trunc(datetime, 'days')) ] # round day
@@ -56,10 +49,6 @@ record_day <- fon_month[between(observed_on, ini, end)][, .(count = .N), by = da
 
 fon_month[observed_on %between% c(ini, end)][, .(count = .N)]
 
-<<<<<<< HEAD
-=======
-
->>>>>>> e063050124ee08850fddb606fc2f2447116b5f8e
 # Remarkable taxa ----
 # fon[taxon_id == 424478] # L. ricardoi
 # fon[taxon_id == 357867] # Adonis microcarpa
@@ -69,13 +58,8 @@ fon_month[observed_on %between% c(ini, end)][, .(count = .N)]
 fonvalid <-
   fon_month[time_observed_at %between% c(ini, end) &
               quality_grade == 'research'][
-<<<<<<< HEAD
                 , c('id', 'taxon_id', 'scientific_name', 'latitude',
                     'longitude', 'time_observed_at', 'url')]
-=======
-    , c('id', 'taxon_id', 'scientific_name', 'latitude',
-        'longitude', 'time_observed_at', 'url')]
->>>>>>> e063050124ee08850fddb606fc2f2447116b5f8e
 
 valid_sf <-
   fonvalid %>%
@@ -117,10 +101,6 @@ p_utm_aco <-
                    labels = c('1-10', '11-25', '26-50', '51-75', '>75'))
   ) %>% filter(!is.na(id))
 
-<<<<<<< HEAD
-=======
-
->>>>>>> e063050124ee08850fddb606fc2f2447116b5f8e
 # Plot UTM map ----
 p1 <-
   ggplot() +
@@ -193,29 +173,16 @@ p3 <-
   theme_plot2()
 p3
 
-<<<<<<< HEAD
 # Month Top 5 taxa ----
-=======
-
-
->>>>>>> e063050124ee08850fddb606fc2f2447116b5f8e
 top5taxa <-
   fon_month %>%
   filter(scientific_name %in% top5$scientific_name)
 
-<<<<<<< HEAD
 # sf object
 top5taxa_sf <-
   top5taxa %>%
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326, agr = "constant")
 # Coerce points to ee object
-=======
-# sf object ----
-top5taxa_sf <-
-  top5taxa %>%
-  st_as_sf(coords = c("longitude", "latitude"), crs = 4326, agr = "constant")
-# Coerce points to ee object ----
->>>>>>> e063050124ee08850fddb606fc2f2447116b5f8e
 ptos_ee <-
   st_geometry(top5taxa_sf) %>%
   sf_as_ee()
@@ -223,33 +190,20 @@ ptos_ee <-
 # EarthEngine - Use Corine CLC ----
 clc18 = ee$Image('COPERNICUS/CORINE/V20/100m/2018')$select('landcover')
 
-<<<<<<< HEAD
 # Extract CORINE LC to ee points ----
-=======
-# Extract CORINE landcover to ee points ----
->>>>>>> e063050124ee08850fddb606fc2f2447116b5f8e
 top5taxa_clc <- f_map2point(clc18, ptos_ee)
 
 # Coerce eeFeature to DT ----
 top5taxa_clc <- rgee::ee_as_sf(top5taxa_clc)
-<<<<<<< HEAD
 top5taxa_clc$taxonname <- top5taxa$scientific_name # taxon.name
-=======
-top5taxa_clc$taxonname <- top5taxa$taxon.name
->>>>>>> e063050124ee08850fddb606fc2f2447116b5f8e
 st_geometry(top5taxa_clc) <- NULL
 top5taxa_clc <- setDT(top5taxa_clc)
 
 # Summarise table
 summary_clc <- top5taxa_clc[ , .(count = .N), by = 'landcover'][
-<<<<<<< HEAD
   order(-count)] %>%
   inner_join(colourshex, by = c('landcover' = 'CLC_CODE'))
 
-=======
-  order(-count)] %>% inner_join(colourshex,
-                                by = c('landcover' = 'CLC_CODE'))
->>>>>>> e063050124ee08850fddb606fc2f2447116b5f8e
 summary_clc$landcover <- as.character(summary_clc$landcover)
 
 # CLC legend colours ----
@@ -288,7 +242,6 @@ final
 
 dev.off()
 
-<<<<<<< HEAD
 # Flora e CLC Network ----
 
 library(bipartite)
@@ -342,7 +295,3 @@ bipartite::plotweb(clcnetm, abuns.type='additional',
 )
 
 dev.off()
-
-=======
->>>>>>> e063050124ee08850fddb606fc2f2447116b5f8e
-
