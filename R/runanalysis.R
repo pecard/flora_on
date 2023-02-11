@@ -58,8 +58,8 @@ fon_month[observed_on %between% c(ini, end)][, .(count = .N)]
 fonvalid <-
   fon_month[time_observed_at %between% c(ini, end) &
               quality_grade == 'research'][
-    , c('id', 'taxon_id', 'scientific_name', 'latitude',
-        'longitude', 'time_observed_at', 'url')]
+                , c('id', 'taxon_id', 'scientific_name', 'latitude',
+                    'longitude', 'time_observed_at', 'url')]
 
 valid_sf <-
   fonvalid %>%
@@ -201,8 +201,9 @@ top5taxa_clc <- setDT(top5taxa_clc)
 
 # Summarise table
 summary_clc <- top5taxa_clc[ , .(count = .N), by = 'landcover'][
-  order(-count)] %>% inner_join(colourshex,
-                                by = c('landcover' = 'CLC_CODE'))
+  order(-count)] %>%
+  inner_join(colourshex, by = c('landcover' = 'CLC_CODE'))
+
 summary_clc$landcover <- as.character(summary_clc$landcover)
 
 # CLC legend colours ----
@@ -238,6 +239,60 @@ ragg::agg_png(here::here("figures",
                                 format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")),
               res = 320, width = 250, height = 170, units = "mm")
 final
+
+dev.off()
+
+# Flora e CLC Network ----
+
+library(bipartite)
+library(grDevices)
+
+#clcnet_top <- summary_clc[1:6, ]$landcover
+clcnet_top <- summary_clc[1:6, ][ , val := 1]
+
+clcnet <- top5taxa_clc[ , val := 1][
+  landcover %in% clcnet_top$landcover]
+
+clcnetcol <-
+  merge(x = clcnet, y = colourshex[ , c(4,5,6)], by.x="landcover",
+        by.y="CLC_CODE")
+
+clcnetwd <-
+  clcnetcol %>%
+  pivot_wider(id_cols = "taxonname",
+              names_from = "Labelplot",
+              values_from = "val",
+              values_fn = list(val = length))
+clcnetm <-
+  data.matrix(clcnetwd[ ,2:7])
+row.names(clcnetm) <- clcnetwd$taxonname
+clcnetm[is.na(clcnetm)] <- 0
+
+bipcols <- filter(colourshex, Labelplot %in% colnames(clcnetm))$hexcode
+
+bipartite::plotweb(clcnetm, abuns.type='additional',
+                   arrow="up.center",
+                   text.rot=0,
+                   col.interaction = adjustcolor('#21908CFF',
+                                                            alpha.f = 0.2),
+                   bor.col.interaction = NA,
+                   col.high=bipcols,
+                   col.low = '#21908CFF'
+)
+ragg::agg_png(here::here("figures",
+                         paste0("README-example_network_pt",
+                                format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")),
+              res = 320, width = 130, height = 80, units = "mm")
+
+bipartite::plotweb(clcnetm, abuns.type='additional',
+                   arrow="up.center",
+                   text.rot=0,
+                   col.interaction = adjustcolor('#21908CFF',
+                                                            alpha.f = 0.2),
+                   bor.col.interaction = NA,
+                   col.high=bipcols,
+                   col.low = '#21908CFF'
+)
 
 dev.off()
 
