@@ -1,11 +1,11 @@
 
-t_lric <- iNat(project_id = 'flora-on', year = 2020, taxon_id = 424478) # L ricardoi
-iNat(project_id = 'flora-on', year = 2020, taxon_id = 56024)
+#t_lric <- iNat(project_id = 'flora-on', year = 2020, taxon_id = 424478) # L ricardoi
+#iNat(project_id = 'flora-on', year = 2020, taxon_id = 56024)
 
 flor_lst <- vector('list')
 top5taxa_id <- unique(top5taxa$taxon_id)
 for(i in seq_along(top5taxa_id)){
-  flor_lst[[i]] <- iNat(project_id = 'flora-on', year = 2020,
+  flor_lst[[i]] <- iNat(project_id = 'flora-on', year = 2022,
                         taxon_id = top5taxa_id[i])
 }
 fl_list <- bind_rows(flor_lst)
@@ -46,7 +46,7 @@ p5 <- floracao %>%
   labs(x = NULL) +
   scale_x_date(date_breaks = '1 month', date_labels = "%b",
                expand = c(0,0))
-
+p5
 floracao %>%
   ggplot(aes(y = taxon, x = data, fill = taxon)) +
   geom_density_ridges(scale = 1.5, alpha = 0.7, colour = NA) +
